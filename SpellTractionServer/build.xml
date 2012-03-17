@@ -1,0 +1,45 @@
+<project default="build_abc">
+	<!-- Location to tools like abcdump, asc.jar, etc... downloaded from redtamarin -->
+	<property name="redtamarin-tools" location="/Code/ServerActionscript/bin"/>
+	<property name="appName" value="SpellTractionServer"/>
+	<property name="projectPath" location="./"/>
+	
+	<target name="build_abc" depends="clean">
+		<echo message="${redtamarin-tools}/abcdump" />
+		<echo message="${projectPath}" />
+		<echo message="${appName}" />
+		
+		<mkdir dir="bin-abc"/>
+		<!-- First Create the correct abc for your application custom classes -->
+		<exec executable="${redtamarin-tools}/abcdump">
+			<arg value="-a"/>
+			<arg value="${projectPath}/bin-debug/${appName}ABC.swf"/>
+		</exec>
+		
+		<move file="${projectPath}/bin-debug/${appName}ABC.abc" todir="bin-abc"/>
+		
+		<!-- Now we build the abc of the application with the imports of the app classes
+			ASSUMES builtin.abc and are located in the same directory ./asc
+		-AS3 -strict -import builtin.abc -import toplevel.abc 
+		-import ${project_loc}/bin-debug/SpellTractionServerABC.abc ${resource_loc} -->
+		<exec executable="java">
+			<arg value="-jar"/>
+			<arg value="${redtamarin-tools}/asc.jar"/>
+			<arg value="-AS3"/>
+			<arg value="-strict"/>
+			<arg value="-import"/>
+			<arg value="${redtamarin-tools}/builtin.abc"/>
+			<arg value="-import"/>
+			<arg value="${redtamarin-tools}/toplevel.abc"/>
+			<arg value="-import"/>
+			<arg value="${projectPath}/bin-abc/SpellTractionServerABC.abc"/>
+			<arg value="${projectPath}/src/${appName}.as"/>
+		</exec>
+
+		<move file="${projectPath}/src/${appName}.abc" todir="bin-abc"/>
+	</target>
+	
+	<target name="clean">
+		<delete dir="bin-abc" />
+	</target>
+</project>

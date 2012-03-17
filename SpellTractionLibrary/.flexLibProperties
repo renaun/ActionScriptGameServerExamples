@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<flexLibProperties includeAllClasses="false" useMultiPlatformConfig="false" version="3">
+  <includeClasses>
+    <classEntry path="com.renaun.data.LinkedList"/>
+    <classEntry path="com.renaun.data.LinkedListNode"/>
+    <classEntry path="com.renaun.spelltraction.brain.BrainCommands"/>
+    <classEntry path="com.renaun.spelltraction.client.InputCapture"/>
+    <classEntry path="com.renaun.spelltraction.data.UserData"/>
+    <classEntry path="com.renaun.spelltraction.heart.IBeatable"/>
+    <classEntry path="com.renaun.spelltraction.nerves.INerveDispatcher"/>
+    <classEntry path="com.renaun.spelltraction.nerves.IServerNerveSystem"/>
+    <classEntry path="com.renaun.spelltraction.skin.TestSkin"/>
+  </includeClasses>
+  <includeResources/>
+  <namespaceManifests/>
+</flexLibProperties>
