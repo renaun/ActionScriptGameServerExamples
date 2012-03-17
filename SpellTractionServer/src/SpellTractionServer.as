@@ -21,7 +21,7 @@ import flash.utils.ByteArray;
 function loopHandler():void
 {
 	if (!ss.listening)
-		ss.listen("10.111.33.190", 12122); // ec2-107-20-128-129.compute-1.amazonaws.com
+		ss.listen("10.2.2.1", 9990);
 	else
 	{
 		serverBrain.beat();
