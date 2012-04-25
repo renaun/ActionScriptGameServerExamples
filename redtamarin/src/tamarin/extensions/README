@@ -1,0 +1,20 @@
+Author: Renaun Erickson
+
+The ServerSocket code has some dependencies. The main one being libev.
+
+On mac I had trouble installing it correctly but this link helped me install 
+it - http://groups.google.com/group/manos-de-mono/browse_thread/thread/cc5328e3abc30fa7
+
+There are a lot of extra steps of integrating new classes and code into the
+redtamarin build process. Some of which are OS specific, because of this I 
+do not have a good guide of how to get this up and running.
+
+I will point out some things you will have to do. You will have to add "ev" to the 
+shell_STATIC_LIBRARIES property in the tamarin/src/shell/manifest.mk file. You will
+ need to add the ServerSocket class to the components.xml if you want to build out a swc.
+You will need to add extensions/ServerSocket.as to the classes that get compiled in 
+the taramin/shell/shell_toplevel.py. Most of these steps are the same for adding new
+classes to redtamarin and you should refer to that documentation.
+
+I do have a snapshot of a working test version if you just want to grab my source snapshot
+that includes redtamarin and my changes. Its at http://renaun.com/serveras/redtamarin_renaun.tar.gz 
