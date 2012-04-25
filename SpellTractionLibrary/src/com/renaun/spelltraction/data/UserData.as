@@ -8,10 +8,10 @@ public final class UserData
 	public var wordList:String = "";
 	public var score:int = 0;
 	public var wordListLevel:int = 1;
-	public var xPos:int = 0;
-	public var yPos:int = 0;
-	public var currentXPos:int = 0;
-	public var currentYPos:int = 0;
+	public var xPos:int = -100;
+	public var yPos:int = -100;
+	public var currentXPos:int = -100;
+	public var currentYPos:int = -100;
 	public var gridPoint:int = -1;
 	
 	public var isDisconnected:Boolean = false;

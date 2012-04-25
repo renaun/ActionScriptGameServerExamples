@@ -1,12 +1,16 @@
 package com.renaun.spelltraction.brain
 {
+import avmplus.System;
+
 import com.renaun.data.LinkedList;
 import com.renaun.data.LinkedListNode;
 import com.renaun.spelltraction.data.UserData;
 import com.renaun.spelltraction.heart.IBeatable;
 import com.renaun.spelltraction.nerves.ServerNerveSystem;
 
+import flash.utils.ByteArray;
 import flash.utils.Dictionary;
+import flash.utils.getTimer;
 
 public class ServerBrain implements IBeatable
 {
@@ -23,6 +27,15 @@ public class ServerBrain implements IBeatable
 			gridValues[i] = 0;
 		}
 		attractor = new UserData(1, -1, 0x111111);
+		
+		gameLetters = createGameLetterList();
+		startTime = getTimer()/1000; // track seconds
+	
+		startMemory = getMem();		
+		
+		half = BrainCommands.gridSize/2;
+		xGrid = BrainCommands.gridStartX + (BrainCommands.colSize * BrainCommands.gridSize/2);
+		yGrid = (BrainCommands.gridStartY*2) + (BrainCommands.rowSize * BrainCommands.gridSize);
 	}
 	
 	private var dirtyList:LinkedList;
@@ -36,13 +49,35 @@ public class ServerBrain implements IBeatable
 	
 	// Grid Variables
 	protected var gridValues:Array = [];
-	protected var currentHighestGridPoint:int = 0;
+	protected var currentHighestGridPoint:int = -1;
 	protected var highGridPointCount:int = 0;
-	private var gridLength:int;
+	private var gridLength:int = 12;
 	private var uniqueID:int = 2;
+	protected var gameLetters:String;
 	
 	// Attractor
 	protected var attractor:UserData;
+
+	private var let:String;
+
+	private var oldLet:String;
+	private var isScoring:Boolean = false;
+
+	private var scoredLetter:String;
+
+	private var delayCount:int = 0;
+
+	private var totalConnections:int = 0;
+
+	private var startTime:Number;
+
+	private var startMemory:Number;
+
+	private var half:int;
+
+	private var xGrid:int;
+
+	private var yGrid:int;
 	
 	public function beat():void
 	{
@@ -56,27 +91,14 @@ public class ServerBrain implements IBeatable
 		while (node)
 		{
 			u = node.data;
-			// RANDOM TEST CODE
-			/*
-			if (u.id > 2 && int((Math.random() * 0xff) % 5) == 1)
-			{
-				
-				u.xPos = Math.random()*400;
-				u.yPos = Math.random()*300;
-				u.isDirty = true;
-			}
-			*/
-			// RANDOM STOP
-			if (u.isNew)
-			{
-				serverNerveSystem.sendUserChange(u, 1);
-				u.isNew = false;
-			}
 			if (u.isDisconnected)
 			{
-				trace("Send Disconnect Bytes");
+				//trace("Send Disconnect Bytes");
 				serverNerveSystem.sendUserChange(u, -1);
 				u.isDisconnected = false;
+				
+				if (totalConnections > 0)
+					totalConnections--;
 				
 				// Remove User
 				playersList.remove(node);
@@ -84,45 +106,70 @@ public class ServerBrain implements IBeatable
 				delete playersHash[u.appID];
 				continue;
 			}
+			else if (u.isNew)
+			{
+				serverNerveSystem.sendUserChange(u, 1);
+				u.isNew = false;
+			}
+			
 			if (u.isDirty)
 			{
 				serverNerveSystem.sendUserLocation(u);
 				u.isDirty = false;
 			}
+			if (isScoring)
+			{
+				if (u.wordList.indexOf(oldLet) > -1)
+				{
+					let = getUniqueLetter(u.wordList);
+					u.score++;
+					serverNerveSystem.userScoreNewLetter(u.score, oldLet, let, u.appID);
+					u.wordList = u.wordList.replace(oldLet, let);
+				}
+			}
 			node = node.next;
 		}
+		isScoring = false;
 		
-		// Determine Attraction State (how long has it been in that grid)
-		
-		// If attraction happens Then Score
-		
-		// Move Attraction Circle
-		var half:int = BrainCommands.gridSize/2;
-		var xGrid:int = ((currentHighestGridPoint%BrainCommands.colSize) * BrainCommands.gridSize)+half;
-		var yGrid:int = (int(currentHighestGridPoint/BrainCommands.colSize) * BrainCommands.gridSize)+half;
-		//trace("xGrid: " + xGrid+"/"+yGrid + " - " + currentHighestGridPoint);
-		if (attractor.xPos != xGrid || attractor.yPos != yGrid)
+		if (currentHighestGridPoint >= 0 && attractor.gridPoint == currentHighestGridPoint)
 		{
-			attractor.xPos = xGrid;
-			attractor.yPos = yGrid;
-			serverNerveSystem.sendUserLocation(attractor);
-		}
-		attractor.gridPoint = findGridPoint(attractor.xPos, attractor.yPos);
-		if (attractor.gridPoint == currentHighestGridPoint)
 			highGridPointCount++;
-		else
-			highGridPointCount = 0;
-		if (highGridPointCount > 20)
-		{
-			//if (currentHighestGridPoint > 0)
-			//	trace("score grid: " + currentHighestGridPoint);
-			highGridPointCount = 0;
+			
+			// Score The Letter
+			if (highGridPointCount > 20)
+			{
+				isScoring = true;
+				oldLet = gameLetters.charAt(currentHighestGridPoint);
+				scoredLetter = oldLet; 
+				let = getUniqueLetter(gameLetters);
+				
+				//trace("BEAT:: oldLet: " + oldLet + " let: " + let);
+				gameLetters = gameLetters.replace(gameLetters.charAt(currentHighestGridPoint), let);
+				serverNerveSystem.scoreAndReplaceLetter(currentHighestGridPoint, let);
+				highGridPointCount = 0;
+				currentHighestGridPoint = -1;
+				attractor.xPos = xGrid;
+				attractor.yPos = yGrid;
+				attractor.gridPoint = currentHighestGridPoint;
+			}
 		}
+		
+		// Send attractor location
+		serverNerveSystem.sendUserLocation(attractor);
 		// Send New User Message
 		serverNerveSystem.sendUserChange(null, 1, true);
 		
 		// Send Delta Messages		
 		serverNerveSystem.sendUserLocation(null, true);
+		
+		if (delayCount++ == 50)
+		{
+			delayCount = 0;
+			
+			// Send Stat Info	
+			var currentHours:Number = ((getTimer()/1000) - startTime)/3600;
+			serverNerveSystem.sendStats(totalConnections, currentHours, getMem(), startMemory);
+		}
 	}
 	
 	public function addNerve(serverNerveSystem:ServerNerveSystem):void
@@ -133,11 +180,16 @@ public class ServerBrain implements IBeatable
 	
 	public function removeUser(appID:int):void
 	{
-		trace("Removing User1: " + appID + " - " + playersHash[appID]);
+		//trace("Removing User1: " + appID + " - " + playersHash[appID]);
 		if (!playersHash[appID])
 			return;
-		trace("Removing User2: " + appID + " - " + playersHash[appID]);
+		//trace("Removing User2: " + appID + " - " + playersHash[appID]);
 		var u:UserData = playersHash[appID];
+		if (u.gridPoint > -1)
+		{
+			gridValues[u.gridPoint]--;
+			findMaxGridPoint();
+		}
 		u.isDisconnected = true;
 	}
 	
@@ -146,11 +198,17 @@ public class ServerBrain implements IBeatable
 		if (playersHash[appID])
 			return;
 		
-		trace("Adding User: " + appID + " - " + playersHash[appID]);
+		//trace("Adding User: " + appID + " - " + playersHash[appID]);
 		var u:UserData = new UserData(appID, shape, color);
 		u.isNew = true;
 		playersHash[appID] = u;
 		playersList.add(new LinkedListNode(u));
+		
+		
+		totalConnections++;
+		
+		// Send current game server grid letters
+		serverNerveSystem.sendGameLetters(gameLetters, appID);
 		
 		// Send them a word list
 		createWordList(u);
@@ -163,18 +221,26 @@ public class ServerBrain implements IBeatable
 		// Send out all existing users
 		var node:LinkedListNode = playersList.head;
 		var gridPoint:int = -1;
+		var buffer:ByteArray = new ByteArray();
 		while (node)
 		{
 			u = node.data;
 			if (u.appID != appID)
 			{
-				serverNerveSystem.sendUserChange(u, 1, false, appID);
+				serverNerveSystem.writeNewUserBuffer(buffer, u, 1);
+				serverNerveSystem.writeLocationBuffer(buffer, u);
 			}
 			node = node.next;
 		}
 		
 		//trace("Adding User4: " + id + " - " + playersHash[id]);
-		serverNerveSystem.sendUserChange(null, 1, true, appID);
+		serverNerveSystem.writeBuffer(buffer, appID);
+		//serverNerveSystem.sendUserChange(null, 1, true, appID);
+		//serverNerveSystem.sendUserLocation(null, true, appID);
+		
+		// Send Stat Info	
+		var currentHours:Number = ((getTimer()/1000) - startTime)/3600;
+		serverNerveSystem.sendStats(totalConnections, currentHours, getMem(), startMemory, appID);
 	}
 	
 	public function userLocation(id:int, xPos:int, yPos:int):void
@@ -189,30 +255,60 @@ public class ServerBrain implements IBeatable
 		// Check out GridPoint and find new one, adjust if needed
 		var old:int = u.gridPoint;
 		u.gridPoint = findGridPoint(u.xPos, u.yPos); // Not carry about users not actually being there
-		var oldGridPoint:int = currentHighestGridPoint;
 		if (old > -1)
 			gridValues[old]--;
 		if (u.gridPoint > -1)
 			gridValues[u.gridPoint]++;
-		if (old < 0 || u.gridPoint < 0)
+		//if (old < 0 || u.gridPoint < 0 || currentHighestGridPoint == -1)
+		//{
+			findMaxGridPoint();
+		//}
+	}
+	
+	private function findMaxGridPoint():void
+	{
+		var oldGridPoint:int = currentHighestGridPoint;
+		var mxm:int = gridValues[0];
+		var isNotMax:Boolean = false;
+		var count:int = 0;
+		for (var i:int=0; i < gridLength; i++) 
 		{
-			var mxm:int = gridValues[0];
-			for (var i:int=0; i < BrainCommands.colSize*BrainCommands.rowSize; i++) 
+			count += gridValues[i];
+			if (gridValues[i] > mxm) 
 			{
-				if (gridValues[i] > mxm) 
-				{
-					mxm = gridValues[i];
+				mxm = gridValues[i];
+				if (mxm > 1) // Has to have 2 or more
 					currentHighestGridPoint = i;
-				}
 			}
 		}
-		else if (gridValues[u.gridPoint] > gridValues[currentHighestGridPoint])
-			currentHighestGridPoint = u.gridPoint;
-		
+		for (i=0; i < gridLength; i++) 
+		{
+			if (gridValues[i] == mxm && currentHighestGridPoint != i)
+			{
+				isNotMax = true;
+				break;
+			}
+		}
+		if (count < 2 || isNotMax || mxm <= 1)
+			currentHighestGridPoint = -1;
 		// reset grid count if it changes MAYBE move this to not change so much, check on in beat()?
 		if (oldGridPoint != currentHighestGridPoint)
+		{
 			highGridPointCount = 0;
-		//trace("GP["+u.id+"]: " + u.gridPoint + " - " + currentHighestGridPoint);
+			if (currentHighestGridPoint >= 0)
+			{
+				attractor.xPos = ((currentHighestGridPoint%BrainCommands.colSize) * BrainCommands.gridSize)+half + BrainCommands.gridStartX;
+				attractor.yPos = (int(currentHighestGridPoint/BrainCommands.colSize) * BrainCommands.gridSize)+half + BrainCommands.gridStartY;
+				
+				attractor.gridPoint = currentHighestGridPoint;
+			}
+			else
+			{
+				attractor.xPos = xGrid;
+				attractor.yPos = yGrid;
+				attractor.gridPoint = currentHighestGridPoint;
+			}
+		}
 	}
 	
 	private function findGridPoint(xPos:int, yPos:int):int
@@ -224,14 +320,31 @@ public class ServerBrain implements IBeatable
 	
 	protected function createWordList(user:UserData):void
 	{
-		var i:int = 0;
 		var w:String = "";
-		while (i < user.wordListLevel && i < 6)
-		{
-			w += letters[int((Math.random()*10000)%25)];
-			i++;
-		}
+		var len:int = 3;
+		while (len-- > 0)
+			w += getUniqueLetter(w);
 		user.wordList = w;
+	}
+	
+	/**
+	 *	Inital game server letter board list 
+	 */
+	protected function createGameLetterList():String
+	{
+		var w:String = "";
+		var len:int = BrainCommands.rowSize*BrainCommands.colSize;
+		while (len-- > 0)
+			w += getUniqueLetter(w);
+		return w;
+	}
+	
+	private function getUniqueLetter(list:String):String
+	{
+		var let:String = letters[int((Math.random()*10000)%25)];
+		while (list.indexOf(let) > -1)
+			let = letters[int((Math.random()*10000)%25)];
+		return let;
 	}
 	
 	// If this get bigger then a Short 2^16 there is a problem
@@ -243,6 +356,23 @@ public class ServerBrain implements IBeatable
 		while (playersHash[uniqueID+1])
 			uniqueID++;
 		return uniqueID++;
+	}
+	
+	
+	
+	private function getMem():Number
+	{
+		var vals:Array = System.popen("pmap -x " + System.pid + " | tail -1").split(" ");
+		
+		var k:int = 0;
+		for (var i:int = 5; i < 25; i++)
+		{
+			if (vals[i] > 0)
+				k++;
+			if (k == 2)
+				return vals[i] * 100;
+		}
+		return System.privateMemory;
 	}
 }
 }

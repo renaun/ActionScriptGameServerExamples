@@ -11,7 +11,7 @@ import flash.utils.ByteArray;
 import flash.utils.Dictionary;
 
 Socket.prototype.record = function() {};
-
+trace("PID: " + System.pid+"");
 var sockets:Dictionary = new Dictionary();
 var msg:String = "";
 var i:int = 0;
@@ -30,7 +30,7 @@ function createSocket(appid:int):void
 	socket = new Socket();
 	//socket.blocking = false;
 	//socket.connect("ec2-50-16-78-175.compute-1.amazonaws.com", 12122);
-	socket.connect("ec2-107-20-128-129.compute-1.amazonaws.com", 12122);
+	socket.connect("ec2-50-17-145-21.compute-1.amazonaws.com", 12122);
 	socket.appid = appid;
 	sockets[socket] = socket;
 }
@@ -51,9 +51,9 @@ while(j < total && j < 10000)
 		err = Socket.lastError;
 		trace("["+socket.descriptor+"]Error: " + err + ": " + strerror(err));
 	}
-	sleep(800);
+	//sleep(20);
 }
-sleep(500);
+sleep(300);
 var sendBuffer:ByteArray = new ByteArray();
 for each (var socket:Socket in sockets)
 {
@@ -79,7 +79,7 @@ for each (var socket:Socket in sockets)
 			removeSocket(socket);
 		}
 		
-		sleep(300);
+		sleep(10);
 	}
 	else
 	{
@@ -108,14 +108,15 @@ while (1 == 1)
 					socket.receive()
 					//trace("data: " + socket.receive());
 				}
-				if (((k+k2) % 8) == 0)
+				if (((k+k2) % 200) == 0)
 				{
 					sendBuffer.clear();
 					sendBuffer.writeByte(0x02);
 					sendBuffer.writeShort(socket.appid);
-					sendBuffer.writeShort(int(Math.random()*400));
-					sendBuffer.writeShort(int(Math.random()*300));
-					socket.sendBinary(sendBuffer);
+					sendBuffer.writeShort(int(Math.random()*4*117)+24);
+					sendBuffer.writeShort(int(Math.random()*3*117)+24);
+					if (socket && socket.connected)
+						socket.sendBinary(sendBuffer);
 				}
 			}
 			catch(error:*)
@@ -134,5 +135,5 @@ while (1 == 1)
 	k2++;
 	if (k2 > 100000)
 		k2 = 0;
-	sleep(500);
+	sleep(400);
 }

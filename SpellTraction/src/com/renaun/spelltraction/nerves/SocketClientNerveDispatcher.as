@@ -55,8 +55,7 @@ public class SocketClientNerveDispatcher implements INerveDispatcher
 	
 	protected function socketData(event:ProgressEvent):void
 	{
-		// TODO Auto-generated method stub
-		out("Progress: " + event.type + " - " + socket.bytesAvailable);
+		//out("Progress: " + event.type + " - " + socket.bytesAvailable);
 		receiveBuffer.clear();
 		socket.readBytes(receiveBuffer);
 		receiveFunction(receiveBuffer);
@@ -64,29 +63,21 @@ public class SocketClientNerveDispatcher implements INerveDispatcher
 	
 	protected function securityHandler(event:SecurityErrorEvent):void
 	{
-		// TODO Auto-generated method stub
-		
-		// TODO Auto-generated method stub
 		out("Security: "+ event.text);
 	}
 	
 	protected function connectHandler(event:Event):void
 	{
-		// TODO Auto-generated method stub
 		out("Connected:" + event.type);
-		//socket.writeUTFBytes("HELLO;" + String.fromCharCode(0) );
-		//socket.flush();
 	}
 	
 	protected function ioErrorHandler(event:IOErrorEvent):void
 	{
-		// TODO Auto-generated method stub
 		out("ioError: "+ event.text);
 	}
 	
 	private function out(msg:String):void
 	{
-		// TODO Auto Generated method stub
 		trace("[SocketNerveDispatcher]"+msg + "\n");
 	}
 }

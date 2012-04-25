@@ -94,6 +94,15 @@ public class ServerNerveSystem implements IServerNerveSystem
 		
 	}
 	
+	public function sendGameLetters(gameLettersList:String, sendTo:int):void
+	{
+		sendBuffer.clear();
+		sendBuffer.writeByte(BrainCommands.GAME_LETTERS);
+		sendBuffer.writeByte(gameLettersList.length);
+		sendBuffer.writeUTFBytes(gameLettersList);
+		dispatcher.sendMessage(sendBuffer, sendTo);
+	}
+	
 	public function sendUserLetters(wordList:String, sendTo:int):void
 	{
 		sendBuffer.clear();
@@ -115,6 +124,35 @@ public class ServerNerveSystem implements IServerNerveSystem
 		dispatcher.sendMessage(sendBuffer, sendTo);
 	}
 	
+	public function userScoreNewLetter(score:int, oldLetter:String, newLetter:String, sendTo:int):void
+	{
+		sendBuffer.clear();
+		sendBuffer.writeByte(BrainCommands.SCORE_NEW_LETTER);
+		sendBuffer.writeShort(score);
+		sendBuffer.writeUTFBytes(oldLetter+newLetter);
+		dispatcher.sendMessage(sendBuffer, sendTo);
+	}
+	
+	public function scoreAndReplaceLetter(currentHighestGridPoint:int, let:String):void
+	{
+		sendBuffer.clear();
+		sendBuffer.writeByte(BrainCommands.SCORE_LETTER);
+		sendBuffer.writeByte(currentHighestGridPoint);
+		sendBuffer.writeUTFBytes(let);
+		dispatcher.sendMessage(sendBuffer);
+	}
+	
+	public function sendStats(totalConnections:int, upTime:Number, memory:Number, startMemory:Number, sendTo:int = -1):void
+	{
+		sendBuffer.clear();
+		sendBuffer.writeByte(BrainCommands.STATS_UPDATE);
+		sendBuffer.writeInt(totalConnections);
+		sendBuffer.writeFloat(upTime);
+		sendBuffer.writeFloat(memory);
+		sendBuffer.writeFloat(startMemory);
+		dispatcher.sendMessage(sendBuffer, sendTo);
+	}
+	
 	//======= Batch Methods =======//
 	
 	public function sendUserChange(user:UserData, addDelete:int = 1, forceSend:Boolean = false, sendTo:int = -1):void
@@ -131,43 +169,58 @@ public class ServerNerveSystem implements IServerNerveSystem
 			if (forceSend)
 				return;
 		}
-		
+		writeNewUserBuffer(newUserBuffer, user, addDelete);
+	}
+	
+	public function writeNewUserBuffer(buffer:ByteArray, user:UserData, addDelete:int = 1):void
+	{
 		// 1 byte - command
 		// 1 byte - number of user changes
 		// 1 short - id
 		// 1 byte - Add = 1 , Delete = -1
 		// 1 byte - shape
 		// 1 unsigned int - color
-		newUserBuffer.writeByte(BrainCommands.USER_CHANGES);
-		newUserBuffer.writeShort(user.appID);
-		newUserBuffer.writeByte(addDelete);
-		newUserBuffer.writeByte(user.shape);
-		newUserBuffer.writeUnsignedInt(user.color);
+		buffer.writeByte(BrainCommands.USER_CHANGES);
+		buffer.writeShort(user.appID);
+		buffer.writeByte(addDelete);
+		buffer.writeByte(user.shape);
+		buffer.writeUnsignedInt(user.color);
 	}
 	
 	
-	public function sendUserLocation(user:UserData, forceSend:Boolean = false):void
+	public function sendUserLocation(user:UserData, forceSend:Boolean = false, sendTo:int = -1):void
 	{
 		// Limit bytes sent
 		if (forceSend)
 		{
 			if (newLocationsBuffer.length > 0)
 			{
-				dispatcher.sendMessage(newLocationsBuffer);
+				dispatcher.sendMessage(newLocationsBuffer, sendTo);
 				newLocationsBuffer.clear();
 			}
 			if (forceSend)
 				return;
 		}
+		writeLocationBuffer(newLocationsBuffer, user);
+	}	
+	
+	public function writeLocationBuffer(buffer:ByteArray, user:UserData):void
+	{
 		// 1 byte - command
 		// 1 byte - number of user changes
 		// 1 short - id
 		// 1 short - xPos
 		// 1 short - yPos
-		newLocationsBuffer.writeByte(BrainCommands.USER_LOCATIONS);
-		newLocationsBuffer.writeShort(user.appID);
-		newLocationsBuffer.writeShort(user.xPos);
-		newLocationsBuffer.writeShort(user.yPos);
+		buffer.writeByte(BrainCommands.USER_LOCATIONS);
+		buffer.writeShort(user.appID);
+		buffer.writeShort(user.xPos);
+		buffer.writeShort(user.yPos);
+	}
+	
+	public function writeBuffer(buffer:ByteArray, sendTo:int = 1):void
+	{
+		dispatcher.sendMessage(buffer, sendTo);
+		buffer.clear();
 	}
 }
 }

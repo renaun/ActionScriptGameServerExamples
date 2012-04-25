@@ -33,8 +33,8 @@ public class SpellTractionSocket extends Sprite
 	protected function mouseHandler(event:MouseEvent):void
 	{
 		// TODO Auto-generated method stub
-		trace(event.localX + " - " + event.localY);
-		clientBrain.move(event.localX, event.localY);
+		trace(event.stageX + " - " + event.stageY);
+		clientBrain.move(event.stageX, event.stageY);
 	}
 	
 	private function test():void
@@ -46,9 +46,10 @@ public class SpellTractionSocket extends Sprite
 		// serverBrain.addUser(1001, 1, 0xff0000);
 		
 		//serverBrain.addUser(1, 1, 0xffffff);
-		//clientBrain.connect("127.0.0.1", 12122, 1, 0x0033ff);
+		//clientBrain.connect("127.0.0.1", 12123, 1, 0x0033ff);
 		//clientBrain.connect("ec2-50-16-78-175.compute-1.amazonaws.com", 12122, 1, 0xFF0000);
-		clientBrain.connect("ec2-50-17-145-21.compute-1.amazonaws.com", 12122, 1, 0x0000ff);
+		clientBrain.connect("ec2-50-17-145-21.compute-1.amazonaws.com", 12122, 1, 0x0000ff); // adobe ec2
+		//clientBrain.connect("ec2-50-17-145-21.compute-1.amazonaws.com", 12150, 1, 0x0000ff); // adobe ec2
 		
 		
 		trace("wL: " + clientBrain.clientUser.appID + " - " + clientBrain.clientUser.wordList);
@@ -64,7 +65,7 @@ public class SpellTractionSocket extends Sprite
 	{
 		socketDispatcher = new SocketClientNerveDispatcher();
 		
-		skinHeart = new Heartbeat(30);
+		skinHeart = new Heartbeat(20);
 		
 		clientBrain = new ClientBrain(stage);
 		var clientNerve:ClientNerveSystem = new ClientNerveSystem(clientBrain, socketDispatcher);

@@ -12,22 +12,28 @@ include "com/renaun/spelltraction/nerves/SocketServerNerveDispatcher.as";
 */
 import avmplus.ClientSocket;
 import avmplus.ServerSocket;
+import avmplus.System;
 
 import com.renaun.spelltraction.brain.ServerBrain;
 import com.renaun.spelltraction.nerves.ServerNerveSystem;
 import com.renaun.spelltraction.nerves.SocketServerNerveDispatcher;
 
 import flash.utils.ByteArray;
+import flash.utils.getTimer;
+trace("PID: " + System.pid);
 function loopHandler():void
 {
 	if (!ss.listening)
-		ss.listen("10.2.2.1", 9990);
+	{
+		//ss.listen("127.0.0.1", 12123);
+		//ss.listen("10.111.33.190", 12122);
+		ss.listen("10.111.33.190", 12150);
+	}
 	else
 	{
 		serverBrain.beat();
 	}
 }
-
 var serverBrain:ServerBrain;
 var serverNerve:ServerNerveSystem;
 serverBrain = new ServerBrain();
